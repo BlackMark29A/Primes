@@ -46,12 +46,11 @@ template<typename Sieve, std::size_t SieveSize, typename Time>
 struct Runner {
     inline auto operator()(const Time& runTime, const std::size_t numThreads = 1)
     {
-        const auto start = std::chrono::high_resolution_clock::now();
-
         const auto runThread = [&] {
             auto error = false;
             auto passes = std::size_t{0};
-            auto end = std::chrono::high_resolution_clock::now();
+            const auto start = std::chrono::high_resolution_clock::now();
+            auto end = start;
             while(true) {
                 Sieve sieve(SieveSize);
                 sieve.runSieve();
@@ -64,7 +63,7 @@ struct Runner {
                     break;
                 }
             }
-            return std::tuple{error, passes, end, Sieve{}.getConfig()};
+            return std::tuple{error, passes, start, end, Sieve{}.getConfig()};
         };
 
         auto runs = std::vector<std::future<std::invoke_result_t<decltype(runThread)>>>{};
@@ -74,14 +73,16 @@ struct Runner {
 
         auto res = std::async([&] {
             auto totalPasses = std::size_t{0};
-            auto latestEnd = std::chrono::high_resolution_clock::now();
+            auto earliestStart = std::chrono::high_resolution_clock::now();
+            auto latestEnd = earliestStart;
 
             const auto [config, error] = [&] {
                 auto error = false;
                 for(auto i = std::size_t{0}; i < runs.size(); ++i) {
-                    const auto [runError, passes, end, cfg] = runs[i].get();
+                    const auto [runError, passes, start, end, cfg] = runs[i].get();
                     error |= runError;
                     totalPasses += passes;
+                    earliestStart = std::min(earliestStart, start);
                     latestEnd = std::max(latestEnd, end);
                     if(i + 1 >= runs.size()) {
                         return std::pair{cfg, error};
@@ -90,7 +91,7 @@ struct Runner {
                 return std::pair{Config{}, true};
             }();
 
-            const auto duration = latestEnd - start;
+            const auto duration = latestEnd - earliestStart;
             const auto durationS = std::chrono::duration_cast<std::chrono::microseconds>(duration).count() / 1'000'000.0;
 
             const auto name = config.name + "-" + detail::getCompilerName();

@@ -13,12 +13,10 @@ consteval auto genSieve()
     std::fill(sieve.begin(), sieve.end(), true);
 
     for(auto i = std::size_t{2}; i * i <= SieveSize; ++i) {
-        for(auto num = i; i <= SieveSize; ++num) {
-            if(sieve[num]) {
-                i = num;
-                break;
-            }
+        while(!sieve[i]) {
+            ++i;
         }
+
         for(auto num = i * i; num <= SieveSize; num += i) {
             sieve[num] = false;
         }

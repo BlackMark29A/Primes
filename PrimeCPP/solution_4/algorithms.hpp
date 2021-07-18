@@ -113,11 +113,8 @@ class GenericSieve {
 
         auto wheelIdx = idx_t{};
         for(auto i = START_NUM; i * i <= sieveSize; i += strider(wheelIdx, true_v)) {
-            for(auto num = i; i <= sieveSize; num += strider(wheelIdx, true_v)) {
-                if(m_bits[num]) {
-                    i = num;
-                    break;
-                }
+            while(!m_bits[i]) {
+                i += strider(wheelIdx, true_v);
             }
 
             auto strideIdx = wheelIdx;

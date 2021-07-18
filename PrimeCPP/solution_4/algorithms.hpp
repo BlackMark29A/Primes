@@ -154,7 +154,7 @@ class GenericSieve {
         name += (Stride == DynStride::NONE) ? "cs-" : "";
         name += (Stride == DynStride::OUTER) ? "os-" : "";
         name += (Stride == DynStride::BOTH) ? "bs-" : "";
-        name += (HalfStorage) ? "hs-" : "fs-";
+        name += HalfStorage ? "hs-" : "fs-";
         name += m_bits;
         const auto algorithm = (check == 1) ? "base" : "wheel";
         return {name, algorithm, true, m_bits.getBitCount()};

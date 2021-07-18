@@ -10,37 +10,30 @@
 
 #include "utils.hpp"
 
-namespace detail {
-
-template<template<typename, bool> typename Parent, typename ElemT, bool Invert>
-class ElementReference {
-  public:
-    explicit ElementReference(Parent<ElemT, Invert>& parent, const std::size_t idx) : m_parent(parent), m_idx(idx) {}
-
-    inline ElementReference& operator=(const ElemT& value)
-    {
-        m_parent.m_storage[m_idx] = Invert ? !value : value;
-        return *this;
-    }
-
-    inline operator ElemT() const { return Invert ? !m_parent.m_storage[m_idx] : m_parent.m_storage[m_idx]; }
-
-  private:
-    Parent<ElemT, Invert>& m_parent;
-    const std::size_t m_idx;
-};
-
-} // namespace detail
-
 template<typename T, bool Invert = true>
 class VectorStorage {
-    using ElemRef = detail::ElementReference<VectorStorage, T, Invert>;
-    friend ElemRef;
+
+    class ElementReference {
+      public:
+        explicit ElementReference(VectorStorage& parent, const std::size_t idx) : m_parent(parent), m_idx(idx) {}
+
+        inline ElementReference& operator=(const T& value)
+        {
+            m_parent.m_storage[m_idx] = Invert ? !value : value;
+            return *this;
+        }
+
+        inline operator T() const { return Invert ? !m_parent.m_storage[m_idx] : m_parent.m_storage[m_idx]; }
+
+      private:
+        VectorStorage& m_parent;
+        const std::size_t m_idx;
+    };
 
   public:
     explicit VectorStorage(const std::size_t size) : m_storage(size, !Invert) {}
 
-    inline ElemRef operator[](const std::size_t idx) { return ElemRef{*this, idx}; }
+    inline ElementReference operator[](const std::size_t idx) { return ElementReference{*this, idx}; }
 
     inline operator std::string() const
     {
@@ -88,17 +81,19 @@ class BitStorage {
 
     class BitReference {
       public:
-        explicit BitReference(BitStorage& bitStorage, const std::size_t idx) : m_parent(bitStorage), m_idx(idx) {}
+        explicit BitReference(BitStorage& parent, const std::size_t idx) : m_parent(parent), m_idx(idx) {}
 
         inline BitReference& operator=(const bool value)
         {
             const auto byteIdx = m_idx / STORAGE_WIDTH;
             const auto bitIdx = m_idx % STORAGE_WIDTH;
 
-            if(value ^ Invert)
+            if(value ^ Invert) {
                 m_parent.m_storage[byteIdx] |= (T{1} << bitIdx);
-            else
+            }
+            else {
                 m_parent.m_storage[byteIdx] &= ~(T{1} << bitIdx);
+            }
 
             return *this;
         }

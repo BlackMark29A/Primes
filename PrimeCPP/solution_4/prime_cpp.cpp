@@ -124,7 +124,7 @@ static inline void moveAppend(auto& dst, auto&& src)
 template<std::size_t SieveSize, template<typename, auto, typename> typename RunnerT, typename Time>
 static inline auto runAll(const Time& runTime, const bool parallelize = true)
 {
-    constexpr auto wheels = std::tuple{0, 1, 2, 3, 4, 5, 6, 7};
+    constexpr auto wheels = std::tuple{1, 6};
     constexpr auto strides = std::tuple{DynStride::NONE, DynStride::OUTER, DynStride::BOTH};
     constexpr auto sizes = std::tuple{true, false};
     constexpr auto inverts = std::tuple{true, false};
@@ -150,11 +150,14 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
                                                 using type_t = std::tuple_element_t<typeIdx.value, types_t>;
                                                 using vector_runner_t = GenericSieve<VectorStorage<type_t, inverted>, wheelSize, stride, size>;
                                                 using bit_runner_t = GenericSieve<BitStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using masked_bit_runner_t = GenericSieve<MaskedBitStorage<type_t, inverted>, wheelSize, stride, size>;
 
                                                 moveAppend(runnerResults, parallelRunner<RunnerT<vector_runner_t, SieveSize, Time>>(runTime, parallelize));
 
                                                 if constexpr(!std::is_same_v<type_t, bool>) {
                                                     moveAppend(runnerResults, parallelRunner<RunnerT<bit_runner_t, SieveSize, Time>>(runTime, parallelize));
+                                                    moveAppend(runnerResults,
+                                                               parallelRunner<RunnerT<masked_bit_runner_t, SieveSize, Time>>(runTime, parallelize));
                                                 }
                                             }
                                         },
@@ -196,12 +199,11 @@ template<std::size_t SieveSize>
     auto res = std::vector<std::future<bool>>{};
     // clang-format off
     using runners_t = std::tuple<
-                                 GenericSieve<VectorStorage<std::uint8_t, true>, 7, DynStride::OUTER, true>,
-                                 GenericSieve<BitStorage<std::uint32_t, true>, 7, DynStride::OUTER, true>,
-                                 GenericSieve<VectorStorage<std::uint8_t, true>, 6, DynStride::OUTER, true>,
                                  GenericSieve<BitStorage<std::uint32_t, true>, 6, DynStride::OUTER, true>,
-                                 GenericSieve<VectorStorage<std::uint8_t, true>, 1, DynStride::NONE, true>,
-                                 GenericSieve<BitStorage<std::uint32_t, true>, 1, DynStride::OUTER, false>
+                                 GenericSieve<BitStorage<std::uint32_t, true>, 1, DynStride::NONE, false>,
+                                 GenericSieve<VectorStorage<std::uint8_t, false>, 1, DynStride::BOTH, true>,
+                                 GenericSieve<VectorStorage<std::uint8_t, true>, 1, DynStride::OUTER, true>,
+                                 GenericSieve<MaskedBitStorage<std::uint8_t, true>, 1, DynStride::OUTER, true>
                                 >;
     // clang-format on
 

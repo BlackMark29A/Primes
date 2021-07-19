@@ -171,3 +171,116 @@ class BitStorage {
     std::size_t m_size;
     T* m_storage = nullptr;
 };
+
+template<typename T, bool Invert = true>
+class MaskedBitStorage {
+    static constexpr auto popcnt(const auto& num)
+    {
+        auto cnt = std::size_t{0};
+        for(auto i = std::size_t{0}; i < sizeof(num); ++i) {
+            if(num >> i & 1) {
+                ++cnt;
+            }
+        }
+        return cnt;
+    }
+
+    static constexpr auto genMaskLUT(bool invert)
+    {
+        auto maskLUT = std::array<std::size_t, STORAGE_WIDTH>{};
+        for(auto i = std::size_t{0}; i < maskLUT.size(); ++i) {
+            maskLUT[i] = std::size_t{1} << i;
+            if(invert) {
+                maskLUT[i] = ~maskLUT[i];
+            }
+        }
+        return maskLUT;
+    }
+
+    static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
+    static constexpr auto BIT_MASK = STORAGE_WIDTH - 1;
+    static constexpr auto BIT_SHIFT = popcnt(BIT_MASK);
+    static constexpr auto BYTE_MASK = ~std::size_t{} & ~BIT_MASK;
+    static constexpr auto MASK_LUT = genMaskLUT(false);
+    static constexpr auto MASK_LUT_INV = genMaskLUT(true);
+
+    class BitReference {
+      public:
+        explicit BitReference(MaskedBitStorage& parent, const std::size_t idx) : m_parent(parent), m_idx(idx) {}
+
+        inline BitReference& operator=(const bool value)
+        {
+            const auto byteIdx = m_idx >> BIT_SHIFT;
+            const auto bitIdx = m_idx & BIT_MASK;
+
+            if(value ^ Invert) {
+                m_parent.m_storage[byteIdx] |= MASK_LUT[bitIdx];
+            }
+            else {
+                m_parent.m_storage[byteIdx] &= MASK_LUT_INV[bitIdx];
+            }
+
+            return *this;
+        }
+
+        inline operator bool() const
+        {
+            const auto byteIdx = m_idx >> BIT_SHIFT;
+            const auto bitIdx = m_idx & BIT_MASK;
+
+            if constexpr(Invert) {
+                return !(m_parent.m_storage[byteIdx] & MASK_LUT[bitIdx]);
+            }
+            else {
+                return (m_parent.m_storage[byteIdx] & MASK_LUT[bitIdx]);
+            }
+        }
+
+      private:
+        MaskedBitStorage& m_parent;
+        const std::size_t m_idx;
+    };
+
+  public:
+    MaskedBitStorage() : m_size(0), m_storage(nullptr) {}
+
+    explicit MaskedBitStorage(const std::size_t size) : m_size(utils::ceildiv(size, STORAGE_WIDTH)), m_storage(new T[m_size])
+    {
+        for(auto i = std::size_t{0}; i < m_size; ++i) {
+            m_storage[i] = Invert ? T{} : ~T{};
+        }
+    }
+
+    ~MaskedBitStorage() { delete[] m_storage; }
+
+    inline BitReference operator[](const std::size_t idx) { return BitReference(*this, idx); }
+
+    inline operator std::string() const
+    {
+        auto desc = Invert ? std::string{"inv_"} : std::string{""};
+        desc += std::string{"mbits"};
+        if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint8_t>) {
+            desc += "<u8>";
+        }
+        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint16_t>) {
+            desc += "<u16>";
+        }
+        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint32_t>) {
+            desc += "<u32>";
+        }
+        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint64_t>) {
+            desc += "<u64>";
+        }
+        else {
+            static_assert(utils::always_false_v<T>, "Unknown storage element type");
+        }
+
+        return desc;
+    }
+
+    std::size_t getBitCount() const { return 1; }
+
+  private:
+    std::size_t m_size;
+    T* m_storage = nullptr;
+};

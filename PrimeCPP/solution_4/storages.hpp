@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <bit>
 #include <string>
 #include <vector>
 
@@ -181,17 +182,6 @@ class BitStorage {
 
 template<typename T, bool Invert = true>
 class MaskedBitStorage {
-    static constexpr auto countSetBits(const auto& num)
-    {
-        auto cnt = std::size_t{0};
-        for(auto i = std::size_t{0}; i < sizeof(num); ++i) {
-            if(num >> i & 1) {
-                ++cnt;
-            }
-        }
-        return cnt;
-    }
-
     static constexpr auto genMaskLUT(bool invert)
     {
         auto maskLUT = std::array<std::size_t, STORAGE_WIDTH>{};
@@ -206,8 +196,7 @@ class MaskedBitStorage {
 
     static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
     static constexpr auto BIT_MASK = STORAGE_WIDTH - 1;
-    static constexpr auto BIT_SHIFT = countSetBits(BIT_MASK);
-    static constexpr auto BYTE_MASK = ~std::size_t{} & ~BIT_MASK;
+    static constexpr auto BIT_SHIFT = std::popcount(BIT_MASK);
     static constexpr auto MASK_LUT = genMaskLUT(false);
     static constexpr auto MASK_LUT_INV = genMaskLUT(true);
 

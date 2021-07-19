@@ -10,6 +10,33 @@
 
 #include "utils.hpp"
 
+namespace detail {
+
+template<typename T>
+static inline std::string formatType()
+{
+    if constexpr(std::is_same_v<std::remove_cvref_t<T>, bool>) {
+        return "<bool>";
+    }
+    else if constexpr(std::is_same_v<std::remove_cvref_t<T>, std::uint8_t>) {
+        return "<u8>";
+    }
+    else if constexpr(std::is_same_v<std::remove_cvref_t<T>, std::uint16_t>) {
+        return "<u16>";
+    }
+    else if constexpr(std::is_same_v<std::remove_cvref_t<T>, std::uint32_t>) {
+        return "<u32>";
+    }
+    else if constexpr(std::is_same_v<std::remove_cvref_t<T>, std::uint64_t>) {
+        return "<u64>";
+    }
+    else {
+        static_assert(utils::always_false_v<T>, "Unknown type");
+    }
+}
+
+} // namespace detail
+
 template<typename T, bool Invert = true>
 class VectorStorage {
 
@@ -39,25 +66,7 @@ class VectorStorage {
     {
         auto desc = Invert ? std::string{"inv_"} : std::string{""};
         desc += "vec";
-        if constexpr(std::is_same_v<std::remove_cv_t<T>, bool>) {
-            desc += "<bool>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint8_t>) {
-            desc += "<u8>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint16_t>) {
-            desc += "<u16>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint32_t>) {
-            desc += "<u32>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint64_t>) {
-            desc += "<u64>";
-        }
-        else {
-            static_assert(utils::always_false_v<T>, "Unknown vector element type");
-        }
-
+        desc += detail::formatType<T>();
         return desc;
     }
 
@@ -145,23 +154,8 @@ class BitStorage {
     inline operator std::string() const
     {
         auto desc = Invert ? std::string{"inv_"} : std::string{""};
-        desc += std::string{"bits"};
-        if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint8_t>) {
-            desc += "<u8>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint16_t>) {
-            desc += "<u16>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint32_t>) {
-            desc += "<u32>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint64_t>) {
-            desc += "<u64>";
-        }
-        else {
-            static_assert(utils::always_false_v<T>, "Unknown storage element type");
-        }
-
+        desc += "bits";
+        desc += detail::formatType<T>();
         return desc;
     }
 
@@ -174,7 +168,7 @@ class BitStorage {
 
 template<typename T, bool Invert = true>
 class MaskedBitStorage {
-    static constexpr auto popcnt(const auto& num)
+    static constexpr auto countSetBits(const auto& num)
     {
         auto cnt = std::size_t{0};
         for(auto i = std::size_t{0}; i < sizeof(num); ++i) {
@@ -199,7 +193,7 @@ class MaskedBitStorage {
 
     static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
     static constexpr auto BIT_MASK = STORAGE_WIDTH - 1;
-    static constexpr auto BIT_SHIFT = popcnt(BIT_MASK);
+    static constexpr auto BIT_SHIFT = countSetBits(BIT_MASK);
     static constexpr auto BYTE_MASK = ~std::size_t{} & ~BIT_MASK;
     static constexpr auto MASK_LUT = genMaskLUT(false);
     static constexpr auto MASK_LUT_INV = genMaskLUT(true);
@@ -258,23 +252,8 @@ class MaskedBitStorage {
     inline operator std::string() const
     {
         auto desc = Invert ? std::string{"inv_"} : std::string{""};
-        desc += std::string{"mbits"};
-        if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint8_t>) {
-            desc += "<u8>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint16_t>) {
-            desc += "<u16>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint32_t>) {
-            desc += "<u32>";
-        }
-        else if constexpr(std::is_same_v<std::remove_cv_t<T>, std::uint64_t>) {
-            desc += "<u64>";
-        }
-        else {
-            static_assert(utils::always_false_v<T>, "Unknown storage element type");
-        }
-
+        desc += "maskedbits";
+        desc += detail::formatType<T>();
         return desc;
     }
 

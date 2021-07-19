@@ -111,8 +111,8 @@ class GenericSieve {
 
         const auto sieveSize = m_sieveSize / (HalfStorage ? 2 : 1);
 
-        auto wheelIdx = idx_t{};
-        for(auto i = START_NUM; i * i <= sieveSize; i += strider(wheelIdx, true_v)) {
+        auto wheelIdx = wheel_idx_t{};
+        for(auto i = idx_t{START_NUM}; i * i <= sieveSize; i += strider(wheelIdx, true_v)) {
             while(!m_bits[i]) {
                 i += strider(wheelIdx, true_v);
             }
@@ -120,7 +120,7 @@ class GenericSieve {
             auto strideIdx = wheelIdx;
             const auto factor = HalfStorage ? (i * 2 + 1) : i;
             const auto start = (factor * factor) / (HalfStorage ? 2 : 1);
-            for(auto num = start; num <= sieveSize; num += factor * strider(strideIdx, false_v)) {
+            for(auto num = idx_t{start}; num <= sieveSize; num += factor * strider(strideIdx, false_v)) {
                 m_bits[num] = false;
             }
         }
@@ -134,7 +134,7 @@ class GenericSieve {
 
         auto primes = std::vector<std::size_t>{};
         std::copy_if(BASE_PRIMES.begin(), BASE_PRIMES.end() - 1, std::back_inserter(primes), [&](const auto& prime) { return prime <= m_sieveSize; });
-        auto wheelIdx = idx_t{};
+        auto wheelIdx = wheel_idx_t{};
         for(auto i = START_NUM; i < sieveSize; i += WHEEL_INC[++wheelIdx]) {
             if(m_bits[i]) {
                 const auto prime = HalfStorage ? (2 * i + 1) : i;
@@ -165,7 +165,8 @@ class GenericSieve {
     static constexpr auto START_NUM = BASE_PRIMES[BASE_PRIMES.size() - 1] / (HalfStorage ? 2 : 1);
     static constexpr auto WHEEL_INC = genWheel<WheelSize, HalfStorage>();
 
-    using idx_t = utils::ModIndex<std::size_t, WHEEL_INC.size()>;
+    using wheel_idx_t = utils::ModIndex<std::size_t, WHEEL_INC.size()>;
+    using idx_t = typename Storage::Index;
 
     const std::size_t m_sieveSize;
     Storage m_bits;

@@ -58,6 +58,8 @@ class VectorStorage {
     };
 
   public:
+    using Index = std::size_t;
+
     explicit VectorStorage(const std::size_t size) : m_storage(size, !Invert) {}
 
     inline ElementReference operator[](const std::size_t idx) { return ElementReference{*this, idx}; }
@@ -121,6 +123,8 @@ class BitStorage {
     };
 
   public:
+    using Index = std::size_t;
+
     BitStorage() : m_size(0), m_storage(nullptr) {}
 
     template<std::size_t SieveSize>
@@ -236,6 +240,8 @@ class MaskedBitStorage {
     };
 
   public:
+    using Index = std::size_t;
+
     MaskedBitStorage() : m_size(0), m_storage(nullptr) {}
 
     explicit MaskedBitStorage(const std::size_t size) : m_size(utils::ceildiv(size, STORAGE_WIDTH)), m_storage(new T[m_size])

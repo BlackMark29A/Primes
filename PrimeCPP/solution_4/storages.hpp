@@ -37,12 +37,17 @@ static inline std::string formatType()
 
 } // namespace detail
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<typename T, bool Invert = true>
 class VectorStorage {
+  public:
+    using Index = std::size_t;
 
+  private:
     class ElementReference {
       public:
-        explicit ElementReference(VectorStorage& parent, const std::size_t idx) : m_parent(parent), m_idx(idx) {}
+        explicit ElementReference(VectorStorage& parent, const Index idx) : m_parent(parent), m_idx(idx) {}
 
         inline ElementReference& operator=(const T& value)
         {
@@ -54,15 +59,13 @@ class VectorStorage {
 
       private:
         VectorStorage& m_parent;
-        const std::size_t m_idx;
+        const Index m_idx;
     };
 
   public:
-    using Index = std::size_t;
-
     explicit VectorStorage(const std::size_t size) : m_storage(size, !Invert) {}
 
-    inline ElementReference operator[](const std::size_t idx) { return ElementReference{*this, idx}; }
+    inline ElementReference operator[](const Index idx) { return ElementReference{*this, idx}; }
 
     inline operator std::string() const
     {
@@ -86,13 +89,19 @@ class VectorStorage {
     std::vector<T> m_storage;
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<typename T, bool Invert = true>
 class BitStorage {
     static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
 
+  public:
+    using Index = std::size_t;
+
+  private:
     class BitReference {
       public:
-        explicit BitReference(BitStorage& parent, const std::size_t idx) : m_parent(parent), m_idx(idx) {}
+        explicit BitReference(BitStorage& parent, const Index idx) : m_parent(parent), m_idx(idx) {}
 
         inline BitReference& operator=(const bool value)
         {
@@ -119,12 +128,10 @@ class BitStorage {
 
       private:
         BitStorage& m_parent;
-        const std::size_t m_idx;
+        const Index m_idx;
     };
 
   public:
-    using Index = std::size_t;
-
     BitStorage() : m_size(0), m_storage(nullptr) {}
 
     template<std::size_t SieveSize>
@@ -153,7 +160,7 @@ class BitStorage {
 
     ~BitStorage() { delete[] m_storage; }
 
-    inline BitReference operator[](const std::size_t idx) { return BitReference(*this, idx); }
+    inline BitReference operator[](const Index idx) { return BitReference(*this, idx); }
 
     inline operator std::string() const
     {
@@ -169,6 +176,8 @@ class BitStorage {
     std::size_t m_size;
     T* m_storage = nullptr;
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T, bool Invert = true>
 class MaskedBitStorage {
@@ -202,9 +211,13 @@ class MaskedBitStorage {
     static constexpr auto MASK_LUT = genMaskLUT(false);
     static constexpr auto MASK_LUT_INV = genMaskLUT(true);
 
+  public:
+    using Index = std::size_t;
+
+  private:
     class BitReference {
       public:
-        explicit BitReference(MaskedBitStorage& parent, const std::size_t idx) : m_parent(parent), m_idx(idx) {}
+        explicit BitReference(MaskedBitStorage& parent, const Index idx) : m_parent(parent), m_idx(idx) {}
 
         inline BitReference& operator=(const bool value)
         {
@@ -236,12 +249,10 @@ class MaskedBitStorage {
 
       private:
         MaskedBitStorage& m_parent;
-        const std::size_t m_idx;
+        const Index m_idx;
     };
 
   public:
-    using Index = std::size_t;
-
     MaskedBitStorage() : m_size(0), m_storage(nullptr) {}
 
     explicit MaskedBitStorage(const std::size_t size) : m_size(utils::ceildiv(size, STORAGE_WIDTH)), m_storage(new T[m_size])
@@ -253,7 +264,7 @@ class MaskedBitStorage {
 
     ~MaskedBitStorage() { delete[] m_storage; }
 
-    inline BitReference operator[](const std::size_t idx) { return BitReference(*this, idx); }
+    inline BitReference operator[](const Index idx) { return BitReference(*this, idx); }
 
     inline operator std::string() const
     {

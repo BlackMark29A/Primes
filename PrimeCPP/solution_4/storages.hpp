@@ -42,10 +42,8 @@ static inline std::string formatType()
 
 template<typename T, bool Invert = true>
 class VectorStorage {
-  public:
     using Index = std::size_t;
 
-  private:
     class ElementReference {
       public:
         explicit ElementReference(VectorStorage& parent, const Index idx) : m_parent(parent), m_idx(idx) {}
@@ -86,6 +84,8 @@ class VectorStorage {
         }
     }
 
+    Index makeIdx(const std::size_t start) const { return Index{start}; }
+
   private:
     std::vector<T> m_storage;
 };
@@ -94,12 +94,10 @@ class VectorStorage {
 
 template<typename T, bool Invert = true>
 class BitStorage {
-    static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
-
-  public:
     using Index = std::size_t;
 
-  private:
+    static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
+
     class BitReference {
       public:
         explicit BitReference(BitStorage& parent, const Index idx) : m_parent(parent), m_idx(idx) {}
@@ -173,6 +171,8 @@ class BitStorage {
 
     std::size_t getBitCount() const { return 1; }
 
+    Index makeIdx(const std::size_t start) const { return Index{start}; }
+
   private:
     std::size_t m_size;
     T* m_storage = nullptr;
@@ -182,6 +182,8 @@ class BitStorage {
 
 template<typename T, bool Invert = true>
 class MaskedBitStorage {
+    using Index = std::size_t;
+
     static constexpr auto genMaskLUT(bool invert)
     {
         auto maskLUT = std::array<std::size_t, STORAGE_WIDTH>{};
@@ -200,10 +202,6 @@ class MaskedBitStorage {
     static constexpr auto MASK_LUT = genMaskLUT(false);
     static constexpr auto MASK_LUT_INV = genMaskLUT(true);
 
-  public:
-    using Index = std::size_t;
-
-  private:
     class BitReference {
       public:
         explicit BitReference(MaskedBitStorage& parent, const Index idx) : m_parent(parent), m_idx(idx) {}
@@ -264,6 +262,8 @@ class MaskedBitStorage {
     }
 
     std::size_t getBitCount() const { return 1; }
+
+    Index makeIdx(const std::size_t start) const { return Index{start}; }
 
   private:
     std::size_t m_size;

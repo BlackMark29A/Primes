@@ -151,6 +151,7 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
                                                 using vector_runner_t = GenericSieve<VectorStorage<type_t, inverted>, wheelSize, stride, size>;
                                                 using bit_runner_t = GenericSieve<BitStorage<type_t, inverted>, wheelSize, stride, size>;
                                                 using masked_bit_runner_t = GenericSieve<MaskedBitStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using strided_bit_runner_t = GenericSieve<StridedBitStorage<type_t, inverted>, wheelSize, stride, size>;
 
                                                 moveAppend(runnerResults, parallelRunner<RunnerT<vector_runner_t, SieveSize, Time>>(runTime, parallelize));
 
@@ -158,6 +159,8 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
                                                     moveAppend(runnerResults, parallelRunner<RunnerT<bit_runner_t, SieveSize, Time>>(runTime, parallelize));
                                                     moveAppend(runnerResults,
                                                                parallelRunner<RunnerT<masked_bit_runner_t, SieveSize, Time>>(runTime, parallelize));
+                                                    moveAppend(runnerResults,
+                                                               parallelRunner<RunnerT<strided_bit_runner_t, SieveSize, Time>>(runTime, parallelize));
                                                 }
                                             }
                                         },

@@ -269,3 +269,99 @@ class MaskedBitStorage {
     std::size_t m_size;
     T* m_storage = nullptr;
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T, bool Invert = true>
+class StridedBitStorage {
+    static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
+
+    class Index {
+      public:
+        friend StridedBitStorage;
+
+        constexpr Index(const std::size_t start, const std::size_t width) : m_width(width), m_byte(start % width), m_bit(start / width) { genMask(); }
+
+        constexpr inline Index& operator+=(const std::size_t inc)
+        {
+            m_byte += inc;
+            while(m_byte >= m_width) {
+                m_byte -= m_width;
+                ++m_bit;
+                genMask();
+            }
+            return *this;
+        }
+
+        constexpr inline std::size_t operator*(const Index& rhs) const { return static_cast<std::size_t>(*this) * static_cast<std::size_t>(rhs); }
+        constexpr inline std::size_t operator*(const std::size_t& rhs) const { return static_cast<std::size_t>(*this) * rhs; }
+
+        constexpr inline auto operator<=>(const std::size_t rhs) const { return static_cast<std::size_t>(*this) <=> rhs; }
+
+        constexpr explicit inline operator std::size_t() const { return m_bit * m_width + m_byte; }
+
+      private:
+        constexpr inline void genMask()
+        {
+            m_mask = (T{1} << m_bit);
+            m_maskInv = ~(T{1} << m_bit);
+        }
+
+        const std::size_t m_width;
+        std::size_t m_byte;
+        std::size_t m_bit;
+        T m_mask;
+        T m_maskInv;
+    };
+
+    class StridedBitReference {
+      public:
+        explicit StridedBitReference(StridedBitStorage& parent, const Index& idx) : m_parent(parent), m_idx(idx) {}
+
+        inline StridedBitReference& operator=(const bool value)
+        {
+            if(value ^ Invert) {
+                m_parent.m_storage[m_idx.m_byte] |= m_idx.m_mask;
+            }
+            else {
+                m_parent.m_storage[m_idx.m_byte] &= m_idx.m_maskInv;
+            }
+
+            return *this;
+        }
+
+        inline operator bool() const { return ((m_parent.m_storage[m_idx.m_byte] >> m_idx.m_bit) & 1) ^ Invert; }
+
+      private:
+        StridedBitStorage& m_parent;
+        const Index& m_idx;
+    };
+
+  public:
+    explicit StridedBitStorage(const std::size_t size) : m_size(utils::ceildiv(size, STORAGE_WIDTH)), m_storage(new T[m_size])
+    {
+        for(auto i = std::size_t{0}; i < m_size; ++i) {
+            m_storage[i] = Invert ? T{} : ~T{};
+        }
+    }
+
+    ~StridedBitStorage() { delete[] m_storage; }
+
+    inline StridedBitReference operator[](const Index& idx) { return StridedBitReference(*this, idx); }
+
+    inline operator std::string() const
+    {
+        auto desc = Invert ? std::string{"inv_"} : std::string{""};
+        desc += "stridedbits";
+        desc += detail::formatType<T>();
+        return desc;
+    }
+
+    std::size_t getBitCount() const { return 1; }
+
+    Index makeIdx(const std::size_t start) const { return Index{start, m_size}; }
+
+  private:
+    std::size_t m_size;
+    T* m_storage = nullptr;
+};

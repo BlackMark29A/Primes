@@ -276,27 +276,43 @@ template<typename T, bool Invert = true>
 class StridedBitStorage {
     static constexpr auto STORAGE_WIDTH = sizeof(T) * CHAR_BIT;
 
+  private:
     class Index {
       public:
         friend StridedBitStorage;
 
-        constexpr Index(const std::size_t start, const std::size_t width) : m_width(width), m_byte(start % width), m_bit(start / width) { genMask(); }
+        constexpr Index(const std::size_t start, const std::size_t width) : m_width(width), m_byte(0), m_bit(0), m_done(false)
+        {
+            *this += start;
+            genMask();
+        }
 
         constexpr inline Index& operator+=(const std::size_t inc)
         {
             m_byte += inc;
-            while(m_byte >= m_width) {
-                m_byte -= m_width;
-                ++m_bit;
-                genMask();
-            }
+
+            // Loop unrolling is faster than runtime loop here
+            utils::for_constexpr(
+                [&](const auto) {
+                    if(m_byte >= m_width) {
+                        m_byte -= m_width;
+                        ++m_bit;
+                        genMask();
+                        if(m_bit >= STORAGE_WIDTH) {
+                            m_done = true;
+                        }
+                    }
+                },
+                std::make_index_sequence<STORAGE_WIDTH>{});
+
             return *this;
         }
 
         constexpr inline std::size_t operator*(const Index& rhs) const { return static_cast<std::size_t>(*this) * static_cast<std::size_t>(rhs); }
         constexpr inline std::size_t operator*(const std::size_t& rhs) const { return static_cast<std::size_t>(*this) * rhs; }
 
-        constexpr inline auto operator<=>(const std::size_t rhs) const { return static_cast<std::size_t>(*this) <=> rhs; }
+        constexpr inline auto operator<(const std::size_t rhs) const { return static_cast<std::size_t>(*this) < rhs; }
+        constexpr inline auto operator<=(const std::size_t) const { return !m_done; }
 
         constexpr explicit inline operator std::size_t() const { return m_bit * m_width + m_byte; }
 
@@ -310,6 +326,7 @@ class StridedBitStorage {
         const std::size_t m_width;
         std::size_t m_byte;
         std::size_t m_bit;
+        bool m_done;
         T m_mask;
         T m_maskInv;
     };

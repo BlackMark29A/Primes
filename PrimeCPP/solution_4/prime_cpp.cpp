@@ -108,11 +108,10 @@ template<typename RunnerT, typename Time>
 static inline auto parallelRunner(const Time& runTime, const bool parallelize = true)
 {
     auto runnerResults = std::vector<std::invoke_result_t<RunnerT, Time, std::size_t>>{};
-    const auto threads = parallelize ? std::thread::hardware_concurrency() : 1;
-
-    for(auto numThreads = threads; numThreads >= 1; numThreads /= 2) {
-        runnerResults.push_back(RunnerT{}(runTime, numThreads));
+    if(parallelize) {
+        runnerResults.push_back(RunnerT{}(runTime, std::thread::hardware_concurrency()));
     }
+    runnerResults.push_back(RunnerT{}(runTime, 1));
     return runnerResults;
 }
 
@@ -195,27 +194,48 @@ template<std::size_t SieveSize>
 }
 
 template<std::size_t SieveSize>
-[[maybe_unused]] static inline auto runBenchmark(const auto& runTime)
+[[maybe_unused]] static inline auto runBase(const auto& runTime)
 {
     using run_time_t = std::remove_cvref_t<decltype(runTime)>;
 
     auto res = std::vector<std::future<bool>>{};
     // clang-format off
-    using runners_t = std::tuple<
-                                 GenericSieve<BitStorage<std::uint32_t, true>, 6, DynStride::OUTER, true>,
-                                 GenericSieve<BitStorage<std::uint32_t, true>, 1, DynStride::NONE, false>,
-                                 GenericSieve<VectorStorage<std::uint8_t, false>, 1, DynStride::BOTH, true>,
-                                 GenericSieve<VectorStorage<std::uint8_t, true>, 1, DynStride::OUTER, true>,
-                                 GenericSieve<MaskedBitStorage<std::uint8_t, true>, 1, DynStride::OUTER, true>
-                                >;
+    using base_runners_t = std::tuple<
+                                      GenericSieve<StridedBitStorage<std::uint8_t, true>, 1, DynStride::NONE, true>,
+                                      GenericSieve<VectorStorage<std::uint8_t, true>, 1, DynStride::BOTH, true>
+                                     >;
     // clang-format on
 
     utils::for_constexpr(
         [&](const auto idx) {
-            using runner_t = std::tuple_element_t<idx.value, runners_t>;
+            using runner_t = std::tuple_element_t<idx.value, base_runners_t>;
             moveAppend(res, parallelRunner<Runner<runner_t, SieveSize, run_time_t>>(runTime));
         },
-        std::make_index_sequence<std::tuple_size_v<runners_t>>{});
+        std::make_index_sequence<std::tuple_size_v<base_runners_t>>{});
+
+    return res;
+}
+
+template<std::size_t SieveSize>
+[[maybe_unused]] static inline auto runWheel(const auto& runTime)
+{
+    using run_time_t = std::remove_cvref_t<decltype(runTime)>;
+
+    auto res = std::vector<std::future<bool>>{};
+    // clang-format off
+    using wheel_runners_t = std::tuple<
+                                       GenericSieve<BitStorage<std::uint32_t, true>, 6, DynStride::OUTER, true>,
+                                       GenericSieve<VectorStorage<std::uint8_t, true>, 6, DynStride::OUTER, true>,
+                                       GenericSieve<MaskedBitStorage<std::uint32_t, false>, 6, DynStride::OUTER, true>
+                                      >;
+    // clang-format on
+
+    utils::for_constexpr(
+        [&](const auto idx) {
+            using runner_t = std::tuple_element_t<idx.value, wheel_runners_t>;
+            moveAppend(res, parallelRunner<Runner<runner_t, SieveSize, run_time_t>>(runTime));
+        },
+        std::make_index_sequence<std::tuple_size_v<wheel_runners_t>>{});
 
     return res;
 }
@@ -238,8 +258,10 @@ int main()
     auto res = runPregen<SIEVE_SIZE>(RUN_TIME);
     #elif RUN_SUITE
     auto res = runSuite<SIEVE_SIZE>(RUN_TIME);
-    #else
-    auto res = runBenchmark<SIEVE_SIZE>(RUN_TIME);
+    #elif RUN_BASE
+    auto res = runBase<SIEVE_SIZE>(RUN_TIME);
+    #elif RUN_WHEEL
+    auto res = runWheel<SIEVE_SIZE>(RUN_TIME);
     #endif
 #endif
 

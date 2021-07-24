@@ -23,6 +23,9 @@
 #include "utils.hpp"
 #include "validator.hpp"
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Some helper to get the name of the compiler.
+
 #if defined(__GNUG__) && !defined(__clang__)
     #define COMPILER_GCC
 #elif defined(__clang__)
@@ -41,6 +44,9 @@ namespace detail {
 #endif
 }
 } // namespace detail
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// A generic sieve benchmark runner that takes a sieve type and config, and runs it, potentially in parallel.
 
 template<typename Sieve, std::size_t SieveSize, typename Time>
 struct Runner {
@@ -71,6 +77,8 @@ struct Runner {
             runs.push_back(std::async(std::launch::async, runThread));
         }
 
+        // Collect the result(s) of the benchmark, this is done through std::async to be compatible with the TestRunner,
+        // but isn't done in parallel, contrary to the TestRunner which runs all tests in parallel.
         auto res = std::async([&] {
             auto totalPasses = std::size_t{0};
             auto earliestStart = std::chrono::high_resolution_clock::now();
@@ -104,6 +112,9 @@ struct Runner {
     }
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Convenience function that starts a runner, potentially in parallel.
+
 template<typename RunnerT, typename Time>
 static inline auto parallelRunner(const Time& runTime, const bool parallelize = true)
 {
@@ -115,14 +126,22 @@ static inline auto parallelRunner(const Time& runTime, const bool parallelize = 
     return runnerResults;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Helper to append to a container using move semantics.
+
 static inline void moveAppend(auto& dst, auto&& src)
 {
     dst.insert(dst.end(), std::make_move_iterator(src.begin()), std::make_move_iterator(src.end()));
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Function to create and run all possible combinations of optimizations in order to find a set of optimal
+// combinations any given system/hardware.
+
 template<std::size_t SieveSize, template<typename, auto, typename> typename RunnerT, typename Time>
 static inline auto runAll(const Time& runTime, const bool parallelize = true)
 {
+    // The possible optimizations.
     constexpr auto wheels = std::tuple{1, 6};
     constexpr auto strides = std::tuple{DynStride::NONE, DynStride::OUTER, DynStride::BOTH};
     constexpr auto sizes = std::tuple{true, false};
@@ -131,6 +150,7 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
 
     auto runnerResults = std::vector<std::future<bool>>{};
 
+    // Nested compile time loop to create the cartesian product of the optimizations above.
     utils::for_constexpr(
         [&](const auto wheelIdx) {
             constexpr auto wheelSize = std::get<wheelIdx.value>(wheels);
@@ -156,6 +176,7 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
                                                 moveAppend(runnerResults, parallelRunner<RunnerT<vector_sieve_t, SieveSize, Time>>(runTime, parallelize));
                                                 moveAppend(runnerResults, parallelRunner<RunnerT<array_sieve_t, SieveSize, Time>>(runTime, parallelize));
 
+                                                // The bit-based sieves cannot use bool, because C++ only allows true/false for bools.
                                                 if constexpr(!std::is_same_v<type_t, bool>) {
                                                     moveAppend(runnerResults, parallelRunner<RunnerT<bit_sieve_t, SieveSize, Time>>(runTime, parallelize));
                                                     moveAppend(runnerResults,
@@ -178,15 +199,23 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
     return runnerResults;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Runs tests for every sieve from sieve size 0 up to SIEVE_SIZE.
+
 [[maybe_unused]] static inline auto runTests(const auto& runTime)
 {
     using run_time_t = std::remove_cvref_t<decltype(runTime)>;
     constexpr auto SIEVE_SIZE = 50'000;
 
+    // The tests are run in parallel, but not using the parallelism of runAll/parallelRunner as this would run duplicates
+    // of the same sieve. Rather the TestRunner internally spawns a thread for every sieve.
     auto res = runAll<SIEVE_SIZE, TestRunner>(runTime, false);
     moveAppend(res, parallelRunner<TestRunner<PreGenerated<SIEVE_SIZE>, SIEVE_SIZE, run_time_t>>(runTime, false));
     return res;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Runs the pre-generated benchmark.
 
 template<std::size_t SieveSize>
 [[maybe_unused]] static inline auto runPregen(const auto& runTime)
@@ -194,6 +223,9 @@ template<std::size_t SieveSize>
     using run_time_t = std::remove_cvref_t<decltype(runTime)>;
     return parallelRunner<Runner<PreGenerated<SieveSize>, SieveSize, run_time_t>>(runTime);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Runs the base algorithm benchmarks that were determined to be optimal for Intel/AMD.
 
 template<std::size_t SieveSize>
 [[maybe_unused]] static inline auto runBase(const auto& runTime)
@@ -219,6 +251,9 @@ template<std::size_t SieveSize>
     return res;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Runs the wheel algorithm benchmarks that were determined to be optimal for Intel/AMD.
+
 template<std::size_t SieveSize>
 [[maybe_unused]] static inline auto runWheel(const auto& runTime)
 {
@@ -243,11 +278,17 @@ template<std::size_t SieveSize>
     return res;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Runs the benchmark suite, testing all combinations for optimizations.
+
 template<std::size_t SieveSize>
 [[maybe_unused]] static inline auto runSuite(const auto& runTime)
 {
     return runAll<SieveSize, Runner>(runTime);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Launch the benchmark selected by the given pre-processor define.
 
 int main()
 {
@@ -268,5 +309,6 @@ int main()
     #endif
 #endif
 
+    // Only if no errors occurred does the exit code represent success.
     return std::all_of(res.begin(), res.end(), [](auto& run) { return run.get(); }) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

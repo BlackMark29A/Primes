@@ -96,7 +96,7 @@ struct Runner {
 
             const auto name = config.name + "-" + detail::getCompilerName();
             std::cout << name << ";" << totalPasses << ";" << durationS << ";" << numThreads << ";algorithm=" << config.algorithm
-                      << ";faithful=" << (config.faithful ? "yes" : "no") << ";bits=" << config.bits << std::endl;
+                      << ",faithful=" << (config.faithful ? "yes" : "no") << ",bits=" << config.bits << std::endl;
             return !error;
         });
         res.wait();

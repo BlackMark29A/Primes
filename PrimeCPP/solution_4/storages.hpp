@@ -93,6 +93,53 @@ class VectorStorage {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T, bool Invert = true>
+class ArrayStorage {
+    using Index = std::size_t;
+
+    class ElementReference {
+      public:
+        explicit ElementReference(ArrayStorage& parent, const Index idx) : m_parent(parent), m_idx(idx) {}
+
+        inline ElementReference& operator=(const T& value)
+        {
+            m_parent.m_storage[m_idx] = Invert ? !value : value;
+            return *this;
+        }
+
+        inline operator T() const { return Invert ? !m_parent.m_storage[m_idx] : m_parent.m_storage[m_idx]; }
+
+      private:
+        ArrayStorage& m_parent;
+        const Index m_idx;
+    };
+
+  public:
+    explicit ArrayStorage(const std::size_t size) : m_size(size), m_storage(new T[size]) { std::memset(m_storage, !Invert, m_size * sizeof(T)); }
+
+    ~ArrayStorage() { delete[] m_storage; }
+
+    inline ElementReference operator[](const Index idx) { return ElementReference{*this, idx}; }
+
+    inline operator std::string() const
+    {
+        auto desc = Invert ? std::string{"inv_"} : std::string{""};
+        desc += "arr";
+        desc += detail::formatType<T>();
+        return desc;
+    }
+
+    inline std::size_t getBitCount() const { return sizeof(T) * CHAR_BIT; }
+
+    inline Index makeIdx(const std::size_t start) const { return Index{start}; }
+
+  private:
+    const std::size_t m_size;
+    T* m_storage;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T, bool Invert = true>
 class BitStorage {
     using Index = std::size_t;
 

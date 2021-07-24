@@ -148,11 +148,13 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
                                             if constexpr(!(size && wheelSize == 0)) {
                                                 using type_t = std::tuple_element_t<typeIdx.value, types_t>;
                                                 using vector_runner_t = GenericSieve<VectorStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using array_runner_t = GenericSieve<ArrayStorage<type_t, inverted>, wheelSize, stride, size>;
                                                 using bit_runner_t = GenericSieve<BitStorage<type_t, inverted>, wheelSize, stride, size>;
                                                 using masked_bit_runner_t = GenericSieve<MaskedBitStorage<type_t, inverted>, wheelSize, stride, size>;
                                                 using strided_bit_runner_t = GenericSieve<StridedBitStorage<type_t, inverted>, wheelSize, stride, size>;
 
                                                 moveAppend(runnerResults, parallelRunner<RunnerT<vector_runner_t, SieveSize, Time>>(runTime, parallelize));
+                                                moveAppend(runnerResults, parallelRunner<RunnerT<array_runner_t, SieveSize, Time>>(runTime, parallelize));
 
                                                 if constexpr(!std::is_same_v<type_t, bool>) {
                                                     moveAppend(runnerResults, parallelRunner<RunnerT<bit_runner_t, SieveSize, Time>>(runTime, parallelize));
@@ -202,7 +204,8 @@ template<std::size_t SieveSize>
     // clang-format off
     using base_runners_t = std::tuple<
                                       GenericSieve<StridedBitStorage<std::uint8_t, true>, 1, DynStride::NONE, true>,
-                                      GenericSieve<VectorStorage<std::uint8_t, true>, 1, DynStride::BOTH, true>
+                                      GenericSieve<VectorStorage<std::uint8_t, false>, 1, DynStride::BOTH, true>,
+                                      GenericSieve<ArrayStorage<bool, true>, 1, DynStride::NONE, true>
                                      >;
     // clang-format on
 

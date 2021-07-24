@@ -147,21 +147,21 @@ static inline auto runAll(const Time& runTime, const bool parallelize = true)
                                         [&](const auto typeIdx) {
                                             if constexpr(!(size && wheelSize == 0)) {
                                                 using type_t = std::tuple_element_t<typeIdx.value, types_t>;
-                                                using vector_runner_t = GenericSieve<VectorStorage<type_t, inverted>, wheelSize, stride, size>;
-                                                using array_runner_t = GenericSieve<ArrayStorage<type_t, inverted>, wheelSize, stride, size>;
-                                                using bit_runner_t = GenericSieve<BitStorage<type_t, inverted>, wheelSize, stride, size>;
-                                                using masked_bit_runner_t = GenericSieve<MaskedBitStorage<type_t, inverted>, wheelSize, stride, size>;
-                                                using strided_bit_runner_t = GenericSieve<StridedBitStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using vector_sieve_t = GenericSieve<VectorStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using array_sieve_t = GenericSieve<ArrayStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using bit_sieve_t = GenericSieve<BitStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using masked_bit_sieve_t = GenericSieve<MaskedBitStorage<type_t, inverted>, wheelSize, stride, size>;
+                                                using strided_bit_sieve_t = GenericSieve<StridedBitStorage<type_t, inverted>, wheelSize, stride, size>;
 
-                                                moveAppend(runnerResults, parallelRunner<RunnerT<vector_runner_t, SieveSize, Time>>(runTime, parallelize));
-                                                moveAppend(runnerResults, parallelRunner<RunnerT<array_runner_t, SieveSize, Time>>(runTime, parallelize));
+                                                moveAppend(runnerResults, parallelRunner<RunnerT<vector_sieve_t, SieveSize, Time>>(runTime, parallelize));
+                                                moveAppend(runnerResults, parallelRunner<RunnerT<array_sieve_t, SieveSize, Time>>(runTime, parallelize));
 
                                                 if constexpr(!std::is_same_v<type_t, bool>) {
-                                                    moveAppend(runnerResults, parallelRunner<RunnerT<bit_runner_t, SieveSize, Time>>(runTime, parallelize));
+                                                    moveAppend(runnerResults, parallelRunner<RunnerT<bit_sieve_t, SieveSize, Time>>(runTime, parallelize));
                                                     moveAppend(runnerResults,
-                                                               parallelRunner<RunnerT<masked_bit_runner_t, SieveSize, Time>>(runTime, parallelize));
+                                                               parallelRunner<RunnerT<masked_bit_sieve_t, SieveSize, Time>>(runTime, parallelize));
                                                     moveAppend(runnerResults,
-                                                               parallelRunner<RunnerT<strided_bit_runner_t, SieveSize, Time>>(runTime, parallelize));
+                                                               parallelRunner<RunnerT<strided_bit_sieve_t, SieveSize, Time>>(runTime, parallelize));
                                                 }
                                             }
                                         },

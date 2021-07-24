@@ -5,6 +5,24 @@ CXXFLAGS_GCC = $(CXXFLAGS_COMMON) -funroll-all-loops -fconstexpr-loop-limit=1000
 .PHONY: all
 all: prime_cpp_base_gcc prime_cpp_base_clang prime_cpp_wheel_gcc prime_cpp_wheel_clang prime_cpp_pregen_gcc prime_cpp_pregen_clang prime_cpp_test_gcc prime_cpp_test_clang prime_cpp_suite_gcc prime_cpp_suite_clang
 
+.PHONY: base
+base: prime_cpp_base_gcc prime_cpp_base_clang
+
+.PHONY: wheel
+wheel: prime_cpp_wheel_gcc prime_cpp_wheel_clang
+
+.PHONY: pregen
+pregen: prime_cpp_pregen_gcc prime_cpp_pregen_clang
+
+.PHONY: tests
+tests: prime_cpp_test_gcc prime_cpp_test_clang
+
+.PHONY: suite
+suite: prime_cpp_suite_gcc prime_cpp_suite_clang
+
+.PHONY: bench
+bench: prime_cpp_base_gcc prime_cpp_base_clang prime_cpp_wheel_gcc prime_cpp_wheel_clang prime_cpp_pregen_gcc prime_cpp_pregen_clang
+
 .PHONY: clean
 clean:
 	$(RM) prime_cpp_base_gcc prime_cpp_base_clang prime_cpp_wheel_gcc prime_cpp_wheel_clang prime_cpp_pregen_gcc prime_cpp_pregen_clang prime_cpp_test_gcc prime_cpp_test_clang prime_cpp_suite_gcc prime_cpp_suite_clang
@@ -51,27 +69,27 @@ run_all: all
 	./prime_cpp_suite_gcc
 	./prime_cpp_suite_clang
 
-run_base: prime_cpp_base_gcc prime_cpp_base_clang
+run_base: base
 	./prime_cpp_base_gcc
 	./prime_cpp_base_clang
 
-run_wheel: prime_cpp_wheel_gcc prime_cpp_wheel_clang
+run_wheel: wheel
 	./prime_cpp_wheel_gcc
 	./prime_cpp_wheel_clang
 
-run_pregen: prime_cpp_pregen_gcc prime_cpp_pregen_clang
+run_pregen: pregen
 	./prime_cpp_pregen_gcc
 	./prime_cpp_pregen_clang
 
-run_tests: prime_cpp_test_gcc prime_cpp_test_clang
+run_tests: tests
 	./prime_cpp_test_gcc
 	./prime_cpp_test_clang
 
-run_suite: prime_cpp_suite_gcc prime_cpp_suite_clang
+run_suite: suite
 	./prime_cpp_suite_gcc
 	./prime_cpp_suite_clang
 
-run_bench: prime_cpp_base_gcc prime_cpp_base_clang prime_cpp_wheel_gcc prime_cpp_wheel_clang prime_cpp_pregen_gcc prime_cpp_pregen_clang
+run_bench: bench
 	./prime_cpp_base_gcc
 	./prime_cpp_base_clang
 	./prime_cpp_wheel_gcc
